@@ -166,36 +166,16 @@ typedef struct {
 #define EM_X86_64	62		/* AMD x86-64 architecture */
 #define EM_PDSP		63		/* Sony DSP Processor */
 
-#define EM_FX66		66		/* Siemens FX66 microcontroller */
-#define EM_ST9PLUS	67		/* STMicroelectronics ST9+ 8/16 mc */
-#define EM_ST7		68		/* STmicroelectronics ST7 8 bit mc */
-#define EM_68HC16	69		/* Motorola MC68HC16 microcontroller */
-#define EM_68HC11	70		/* Motorola MC68HC11 microcontroller */
-#define EM_68HC08	71		/* Motorola MC68HC08 microcontroller */
-#define EM_68HC05	72		/* Motorola MC68HC05 microcontroller */
-#define EM_SVX		73		/* Silicon Graphics SVx */
-#define EM_ST19		74		/* STMicroelectronics ST19 8 bit mc */
-#define EM_VAX		75		/* Digital VAX */
-#define EM_CRIS		76		/* Axis Communications 32-bit embedded processor */
-#define EM_JAVELIN	77		/* Infineon Technologies 32-bit embedded processor */
-#define EM_FIREPATH	78		/* Element 14 64-bit DSP Processor */
-#define EM_ZSP		79		/* LSI Logic 16-bit DSP Processor */
-#define EM_MMIX		80		/* Donald Knuth's educational 64-bit processor */
-#define EM_HUANY	81		/* Harvard University machine-independent object files */
-#define EM_PRISM	82		/* SiTera Prism */
-#define EM_AVR		83		/* Atmel AVR 8-bit microcontroller */
-#define EM_FR30		84		/* Fujitsu FR30 */
-#define EM_D10V		85		/* Mitsubishi D10V */
-#define EM_D30V		86		/* Mitsubishi D30V */
-#define EM_V850		87		/* NEC v850 */
-#define EM_M32R		88		/* Mitsubishi M32R */
-#define EM_MN10300	89		/* Matsushita MN10300 */
-#define EM_MN10200	90		/* Matsushita MN10200 */
-#define EM_PJ		91		/* picoJava */
-#define EM_OPENRISC	92		/* OpenRISC 32-bit embedded processor */
-#define EM_ARC_A5	93		/* ARC Cores Tangent-A5 */
-#define EM_XTENSA	94		/* Tensilica Xtensa Architecture */
-#define EM_NUM		95
+#define EM_MCST_ELBRUS (0xAF)
+#define EM_TI_C6000    (0x8C)
+#define EM_AARCH64     (0xB7)
+#define EM_RISCV       (0XF3)
+#define EM_BPF         (0xF7)
+#define EM_65816       (0x101)
+
+// e_version
+#define EV_NONE    (0)
+#define EV_CURRENT (1)
 
 int is_elf(const elf_header* header) {
     if (header->e_ident[1] == 'E' && header->e_ident[2] == 'L' && header->e_ident[3]) return 1;
@@ -224,6 +204,9 @@ int elf_to_struct(FILE* fd, elf_header* header) {
 
     header->e_type      = getc(fd); //TYPE
     header->e_machine   = getc(fd); //ARCH
+    header->e_version   = getc(fd); //VERS
+    header->e_entry     = getc(fd); //ENTRY_POINT
+
 }
 
 int open_elf(FILE* fd, char** argv, elf_header* header) {
@@ -244,41 +227,41 @@ int print_elf_struct(const elf_header* header) {
     // elf type
     switch (header->e_ident[4]) {
     case ELFCLASSNONE:
-        printf("\tClass:\tUnknown[%d]\n", header->e_type);
+        printf("\tClass:\t\t\tUnknown[%d]\n", header->e_type);
         break;
     case ELFCLASS32:
-        printf("\tClass:\tELF32\n");
+        printf("\tClass:\t\t\tELF32\n");
         break;
     case ELFCLASS64:
-        printf("\tClass:\tELF64\n");
+        printf("\tClass:\t\t\tELF64\n");
         break;
     default:
-        printf("\tClass:\tUnknown[%d]\n", header->e_type);
+        printf("\tClass:\t\t\tUnknown[%d]\n", header->e_type);
     }
 
     // data    
     switch (header->e_ident[5]) {
     case ELFDATANONE:
-        printf("\tData:\tUnknown\n");
+        printf("\tData:\t\t\tUnknown\n");
         break;
     case ELFDATA2LSB:
-        printf("\tData:\tLittle endian\n");
+        printf("\tData:\t\t\tLittle endian\n");
         break;
     case ELFDATA2MSB:
-        printf("\tData:\tBig endian\n");
+        printf("\tData:\t\t\tBig endian\n");
         break;
     default:
-        printf("\tData:\tUnknown[%d]\n", header->e_ident[5]);
+        printf("\tData:\t\t\tUnknown[%d]\n", header->e_ident[5]);
     }
 
     // version
     if (header->e_ident[6] == EV_CURRENT)
-        printf("\tVersion: %d (current)\n", header->e_ident[6]);
+        printf("\tVersion:\t\t%d (current)\n", header->e_ident[6]);
     else
-        printf("\tVersion: Unknown[%d]\n", header->e_ident[6]);
+        printf("\tVersion:\t\tUnknown[%d]\n", header->e_ident[6]);
     
     // os/abi
-    printf("\tOS/ABI:\t");
+    printf("\tOS/ABI:\t\t\t");
     switch (header->e_ident[7]) {
         case ELFOSABI_NONE:
             printf("UNIX - System V\n");
@@ -335,10 +318,10 @@ int print_elf_struct(const elf_header* header) {
     }
 
     // ABI
-    printf("\tABI version: 0\n");
+    printf("\tABI version:\t\t0\n");
 
     // type
-    printf("\tType:\t");
+    printf("\tType:\t\t\t");
     switch(header->e_type) {
         case ET_NONE:
             printf("Unknown\n");
@@ -365,10 +348,10 @@ int print_elf_struct(const elf_header* header) {
     }
 
     // machine
-    printf("\tMachine: ");
+    printf("\tMachine:\t\t", header->e_machine);
     switch (header->e_machine) {
         case EM_NONE:
-            printf("No machine\n");
+            printf("Advanced Micro Devices X86-64\n");
             break;
         case EM_M32:
             printf("AT&T WE 32100\n");
@@ -397,9 +380,131 @@ int print_elf_struct(const elf_header* header) {
         case EM_MIPS_RS3_LE:
             printf("MIPS R3000 little-endian\n");
             break;
+        case EM_PARISC:
+            printf("Hewlett-Packard PA-RISC\n");
+            break;
+        case EM_960:
+            printf("Intel 80960\n");
+            break;
+        case EM_PPC:
+            printf("PowerPC\n");
+            break;
+        case EM_PPC64:
+            printf("PowerPC (64-bit)\n");
+            break;
+        case EM_S390:
+            printf("S390, including S390x\n");
+            break;
+        case EM_V800:
+            printf("IBM SPU/SPC\n");
+            break;
+        case EM_FR20:
+            printf("Fujitsu FR20\n");
+            break;
+        case EM_RH32:
+            printf("TRW RH-32\n");
+            break;
+        case EM_RCE:
+            printf("Motorola RCE\n");
+            break;
+        case EM_ARM:
+            printf("ARM (up to ARMv7/Aarch32)\n");
+            break;
+        case EM_FAKE_ALPHA:
+            printf("Digital Alpha\n");
+            break;
+        case EM_SH:
+            printf("SuperH\n");
+            break;
+        case EM_SPARCV9:
+            printf("SPARC Version 9\n");
+            break;
+        case EM_TRICORE:
+            printf("Siemens TriCore embedded processor\n");
+            break;
+        case EM_ARC:
+            printf("Argonaut RISC Core\n");
+            break;
+        case EM_H8_300:
+            printf("Hitachi H8/300\n");
+            break;
+        case EM_H8_300H:
+            printf("Hitachi H8/300H\n");
+            break;
+        case EM_H8S:
+            printf("Hitachi H8S\n");
+            break;
+        case EM_H8_500:
+            printf("Hitachi H8/500\n");
+            break;
+        case EM_IA_64:
+            printf("IA-64\n");
+            break;
+        case EM_MIPS_X:
+            printf("Stanford MIPS-X\n");
+            break;
+        case EM_COLDFIRE:
+            printf("Motorola ColdFire\n");
+            break;
+        case EM_68HC12:
+            printf("Motorola M68HC12\n");
+            break;
+        case EM_MMA:
+            printf("Fujitsu MMA Multimedia Accelerator\n");
+            break;
+        case EM_PCP:
+            printf("Siemens PCP\n");
+            break;
+        case EM_NCPU:
+            printf("Sony nCPU embedded RISC processor\n");
+            break;
+        case EM_NDR1:
+            printf("Denso NDR1 microprocessor\n");
+            break;
+        case EM_STARCORE:
+            printf("Motorola Star*Core processor\n");
+            break;
+        case EM_ME16:
+            printf("Toyota ME16 processor\n");
+            break;
+        case EM_ST100:
+            printf("STMicroelectronics ST100 processor\n");
+            break;
+        case EM_TINYJ:
+            printf("Advanced Logic Corp. TinyJ embedded processor family\n");
+            break;
+        case EM_X86_64:
+            printf("x86-64\n");
+            break;
+        case EM_MCST_ELBRUS:
+            printf("Elbrus (proc arch)\n");
+            break;
+        case EM_TI_C6000:
+            printf("TMS320C6000 Family\n");
+            break;
+        case EM_AARCH64:
+            printf("ARM 64-bits (ARMv8/Aarch64)\n");
+            break;
+        case EM_RISCV:
+            printf("RISC-V\n");
+            break;
+        case EM_BPF:
+            printf("Berkeley Packet Filter\n");
+            break;
+        case EM_65816:
+            printf("WDC 65C816\n");
+            break;
         default:
-            printf("Unknown\n");
+            printf("Unknown (%d)\n", header->e_machine);
     }
+
+    // version
+    if (header->e_version != 1)
+        printf("\tVersion:\t\t0x1\n");
+    else 
+        printf("\tVersion:\t\t0x%x\n", header->e_version);
+    // version
+    printf("\tEntry:\t\t0x%d\n", header->e_entry);
 }
 
 #endif
