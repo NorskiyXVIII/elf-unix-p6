@@ -70,6 +70,17 @@ typedef struct {
   Elf32_Half	e_shstrndx;		    /* Section header string table index */
 } elf_header;
 
+typedef struct {
+    Elf32_Word	p_type;			/* Segment type */
+    Elf32_Off	p_offset;		/* Segment file offset */
+    Elf32_Addr	p_vaddr;		/* Segment virtual address */
+    Elf32_Addr	p_paddr;		/* Segment physical address */
+    Elf32_Word	p_filesz;		/* Segment size in file */
+    Elf32_Word	p_memsz;		/* Segment size in memory */
+    Elf32_Word	p_flags;		/* Segment flags */
+    Elf32_Word	p_align;		/* Segment alignment */
+} elf32_phdr;
+
 // classes
 #define ELFCLASSNONE (0)
 #define ELFCLASS32   (1)
@@ -183,7 +194,7 @@ int is_elf(const elf_header* header) {
     return 0;
 }
 
-int elf_to_struct(FILE* fd, elf_header* header) {
+int elf_to_struct(FILE* fd, elf_header* header, elf32_phdr* h_tab) {
     // MAGIC NUMBERS
     header->e_ident[0]  = getc(fd); //0
     header->e_ident[1]  = getc(fd); //E
@@ -202,20 +213,83 @@ int elf_to_struct(FILE* fd, elf_header* header) {
     header->e_ident[14] = getc(fd); //PAD
     header->e_ident[15] = getc(fd); //PAD
 
-    header->e_type      = getc(fd); //TYPE
-    header->e_machine   = getc(fd); //ARCH
-    header->e_version   = getc(fd); //VERS
-    header->e_entry     = getc(fd); //ENTRY_POINT
+    unsigned char* elf_addr_ptr = &(header->e_type);
+    elf_addr_ptr[0] = getc(fd); //TYPE //16
+    elf_addr_ptr[1] = getc(fd); //TYPE //17
 
+    elf_addr_ptr = &(header->e_machine);
+    elf_addr_ptr[0] = getc(fd); //ARCH //18
+    elf_addr_ptr[1] = getc(fd); //ARCH //19
+
+    elf_addr_ptr = &(header->e_version);
+    elf_addr_ptr[0] = getc(fd); //VER //20
+    elf_addr_ptr[1] = getc(fd); //VER //21
+    elf_addr_ptr[2] = getc(fd); //VER //22
+    elf_addr_ptr[2] = getc(fd); //VER //23
+
+    elf_addr_ptr = &(header->e_entry);
+    elf_addr_ptr[0] = getc(fd); //ENTRY_POINT //24
+    elf_addr_ptr[1] = getc(fd); //ENTRY_POINT //25
+    elf_addr_ptr[2] = getc(fd); //ENTRY_POINT //26
+    elf_addr_ptr[3] = getc(fd); //ENTRY_POINT //27
+
+    elf_addr_ptr = &(header->e_phoff);
+    elf_addr_ptr[0] = getc(fd); //PHOFF //28
+    elf_addr_ptr[1] = getc(fd); //PHOFF //29
+    elf_addr_ptr[2] = getc(fd); //PHOFF //30
+    elf_addr_ptr[3] = getc(fd); //PHOFF //31
+
+    elf_addr_ptr = &(header->e_shoff);
+    elf_addr_ptr[0] = getc(fd); //SHOFF //32
+    elf_addr_ptr[1] = getc(fd); //SHOFF //33
+    elf_addr_ptr[2] = getc(fd); //SHOFF //34
+    elf_addr_ptr[3] = getc(fd); //SHOFF //35
+
+    elf_addr_ptr = &(header->e_flags);
+    elf_addr_ptr[0] = getc(fd); //FLAGS //36
+    elf_addr_ptr[1] = getc(fd); //FLAGS //37
+    elf_addr_ptr[2] = getc(fd); //FLAGS //38
+    elf_addr_ptr[3] = getc(fd); //FLAGS //39
+
+    elf_addr_ptr = &(header->e_ehsize);
+    elf_addr_ptr[0] = getc(fd); //EHSIZE //40
+    elf_addr_ptr[1] = getc(fd); //EHSIZE //41
+    elf_addr_ptr = &(header->e_phentsize);
+    elf_addr_ptr[0] = getc(fd); //PHENTSIZE //42
+    elf_addr_ptr[1] = getc(fd); //PHENTSIZE //43
+    elf_addr_ptr = &(header->e_phnum);
+    elf_addr_ptr[0] = getc(fd); //44
+    elf_addr_ptr[1] = getc(fd); //45
+    elf_addr_ptr = &(header->e_shentsize);
+    elf_addr_ptr[0] = getc(fd); //46
+    elf_addr_ptr[1] = getc(fd); //47
+    elf_addr_ptr = &(header->e_shnum);
+    elf_addr_ptr[0] = getc(fd); //48
+    elf_addr_ptr[1] = getc(fd); //49
+    elf_addr_ptr = &(header->e_shstrndx);
+    elf_addr_ptr[0] = getc(fd); //50
+    elf_addr_ptr[1] = getc(fd); //51
+
+    //next table head
+    for (int i = 51; i <= header->e_phoff; i++) getc(fd);
+
+    elf_addr_ptr = &(h_tab->p_type);
+    elf_addr_ptr[0] = getc(fd);
+    elf_addr_ptr[1] = getc(fd);
+    elf_addr_ptr[2] = getc(fd);
+    elf_addr_ptr[3] = getc(fd);
 }
 
-int open_elf(FILE* fd, char** argv, elf_header* header) {
+//atphoff
+
+
+/*int open_elf(FILE* fd, char** argv, elf_header* header) {
     FILE* reader = fopen(argv[1], "r");
     check_open(reader, "Cannot open file[%s]\n");
     elf_to_struct(fd, header);
-}
+}*/
 
-int print_elf_struct(const elf_header* header) {
+int print_elf_struct(const elf_header* header, const elf32_phdr* h_tab) {
     printf("ELF Header: \n");
 
     //magic
@@ -227,41 +301,41 @@ int print_elf_struct(const elf_header* header) {
     // elf type
     switch (header->e_ident[4]) {
     case ELFCLASSNONE:
-        printf("\tClass:\t\t\tUnknown[%d]\n", header->e_type);
+        printf("\tClass:\t\t\t\t\tUnknown[%x]\n", header->e_type);
         break;
     case ELFCLASS32:
-        printf("\tClass:\t\t\tELF32\n");
+        printf("\tClass:\t\t\t\t\tELF32\n");
         break;
     case ELFCLASS64:
-        printf("\tClass:\t\t\tELF64\n");
+        printf("\tClass:\t\t\t\t\tELF64\n");
         break;
     default:
-        printf("\tClass:\t\t\tUnknown[%d]\n", header->e_type);
+        printf("\tClass:\t\t\t\t\tUnknown[%x]\n", header->e_type);
     }
 
     // data    
     switch (header->e_ident[5]) {
     case ELFDATANONE:
-        printf("\tData:\t\t\tUnknown\n");
+        printf("\tData:\t\t\t\t\tUnknown\n");
         break;
     case ELFDATA2LSB:
-        printf("\tData:\t\t\tLittle endian\n");
+        printf("\tData:\t\t\t\t\tLittle endian\n");
         break;
     case ELFDATA2MSB:
-        printf("\tData:\t\t\tBig endian\n");
+        printf("\tData:\t\t\t\t\tBig endian\n");
         break;
     default:
-        printf("\tData:\t\t\tUnknown[%d]\n", header->e_ident[5]);
+        printf("\tData:\t\t\t\t\tUnknown[%x]\n", header->e_ident[5]);
     }
 
     // version
     if (header->e_ident[6] == EV_CURRENT)
-        printf("\tVersion:\t\t%d (current)\n", header->e_ident[6]);
+        printf("\tVersion:\t\t\t\t%d (current)\n", header->e_ident[6]);
     else
-        printf("\tVersion:\t\tUnknown[%d]\n", header->e_ident[6]);
+        printf("\tVersion:\t\t\t\tUnknown[%d]\n", header->e_ident[6]);
     
     // os/abi
-    printf("\tOS/ABI:\t\t\t");
+    printf("\tOS/ABI:\t\t\t\t\t");
     switch (header->e_ident[7]) {
         case ELFOSABI_NONE:
             printf("UNIX - System V\n");
@@ -314,14 +388,14 @@ int print_elf_struct(const elf_header* header) {
             printf("OpenVOS\n");
             break;
         default:
-            printf("Unknown[%d]\n", header->e_ident[7]);
+            printf("Unknown[%x]\n", header->e_ident[7]);
     }
 
     // ABI
-    printf("\tABI version:\t\t0\n");
+    printf("\tABI version:\t\t\t\t%d\n", header->e_ident[8]);
 
     // type
-    printf("\tType:\t\t\t");
+    printf("\tType:\t\t\t\t\t");
     switch(header->e_type) {
         case ET_NONE:
             printf("Unknown\n");
@@ -348,7 +422,7 @@ int print_elf_struct(const elf_header* header) {
     }
 
     // machine
-    printf("\tMachine:\t\t", header->e_machine);
+    printf("\tMachine:\t\t\t\t", header->e_machine);
     switch (header->e_machine) {
         case EM_NONE:
             printf("Advanced Micro Devices X86-64\n");
@@ -500,11 +574,44 @@ int print_elf_struct(const elf_header* header) {
 
     // version
     if (header->e_version != 1)
-        printf("\tVersion:\t\t0x1\n");
+        printf("\tVersion:\t\t\t\t0x1\n");
     else 
-        printf("\tVersion:\t\t0x%x\n", header->e_version);
+        printf("\tVersion:\t\t\t\t0x%x!\n", header->e_version);
+
     // version
-    printf("\tEntry:\t\t0x%d\n", header->e_entry);
+    printf("\tEntry:\t\t\t\t\t0x%x\n", header->e_entry);
+
+    //start of program headers
+
+    printf("\tStart of program headers:\t\t%d", header->e_phoff);
+    
+    if (header->e_phoff < 10 && header->e_phoff < header->e_shoff) 
+        printf("  (bytes into file)\n");
+    else 
+        printf(" (bytes into file)\n");
+    //start of section headers
+    printf("\tStart of section headers:\t\t%d (bytes into file)\n", header->e_shoff);
+    //flags
+    printf("\tFlags:\t\t\t\t\t0x%x\n", header->e_flags);
+    //size of this headers
+    printf("\tSize of this headers:\t\t\t%d (bytes)\n", header->e_ehsize);
+    //size of program headers
+    printf("\tSize of program headers:\t\t%d (bytes)\n", header->e_phentsize);
+    //numofprhd
+    printf("\tNumber of program headers:\t\t%d\n", header->e_phnum);
+    //shentsize
+    printf("\tSize of section headers:\t\t%d\n", header->e_shentsize);
+    //num of sec headers
+    printf("\tNumber of section headers:\t\t%d\n", header->e_shnum);
+    //sect head str tabl idnx
+    printf("\tSection header string table index:\t%d\n", header->e_shstrndx);
+
+    if (header->e_shentsize == 0 && header->e_shnum == 1) 
+        printf("readelf32_p6: \n\t\
+        Warning: possibly corrupt ELF header - it has a non-zero program header offset, but no program headers\n");
+    
+    printf("h_tab->p_type = %d\n", h_tab->p_type);
+
 }
 
 #endif

@@ -5,11 +5,12 @@ int main(int argc, char* argv[]) {
 
     debug_info();
     elf_header elf;
+    elf32_phdr e_tab;
     FILE* reader = fopen(argv[1], "r");
     check_open(reader, "Cannot open file[%s]\n");
     
-    elf_to_struct(reader, &elf);
-    print_elf_struct(&elf);
+    elf_to_struct(reader, &elf, &e_tab);
+    print_elf_struct(&elf, &e_tab);
 
 
 
